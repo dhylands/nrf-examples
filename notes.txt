@@ -1,0 +1,85 @@
+Notes for working with the nrf52840
+
+Zigbee CLI:
+https://www.nordicsemi.com/en/DocLib/Content/SDK_Doc/Thread_SDK/v2-0-0/zigbee_example_cli_agent
+
+CLI Reference:
+https://www.nordicsemi.com/en/DocLib/Content/SDK_Doc/Thread_SDK/v2-0-0/zigbee_example_cli_reference
+
+Regular DK Reference:
+https://www.nordicsemi.com/DocLib/
+
+Edit components/toolchain/gcc/Makefile.posix to make GNU_INSTALL_ROOT point
+to the correct location (if the default isn't correct)
+
+Instal nrfutil:
+sudo python -m pip install nrfutil
+I had to edit /usr/local/bin/nrfutil and change python3 to python
+
+Programming the nrf52840 Dongle:
+nrfutil pkg generate --debug-mode --hw-version 52 --sd-req 0x00 --application _build/nrf52840_xxaa.hex dfu.zip
+nrfutil dfu usb-serial -pkg dfu.zip -p $(find_port.py -n Nordic) -b 115200
+
+Programming the nrf52840 DK:
+
+- install nRF5X Command Line Tools
+https://www.nordicsemi.com/DocLib/Content/User_Guides/nrf5x_cltools/latest/UG/cltools/nrf5x_installation
+I had to add the directory containing nrfjprog into my PATH
+
+- install segger
+https://www.segger.com/downloads/jlink/
+Look in the section "J-Link Software and Documentation Pack"
+
+note that installing the jlink software adds /etc/udev/rules.d/99-jlink.rules
+so you need to unplug and replug and dev boards after doing this to ensure
+flashing works properly.
+
+sudo dpkg -i JLink_Linux_V640_x86_64.deb
+
+Run 'nrfjprog --version' to ensure it finds the JLink software properly.
+
+Now you should be able to do make flash from the various nrf SDK example
+directories and it should flash properly.
+
+nrf52840 Dongle - Getting Started
+https://www.nordicsemi.com/DocLib/Content/User_Guides/nrf52840_dongle/latest/UG/nrf52840_Dongle/getting_started
+
+DFU Trigger Library
+https://www.nordicsemi.com/DocLib/Content/SDK_Doc/nRF5_SDK/v15-2-0/lib_dfu_trigger_usb
+
+To install Open DFU Bootloader on the PCA10056 (DK)
+
+cd examples/dfu/open_bootloader/pca10056_usb_debug/armgcc
+make
+
+Plug USB cable into J2 (other side of board from coin cell battery)
+
+make flash_mbr
+make flash
+
+LED2 will flash to indicate bootloader mode.
+
+Now you can go to examples/peripheral/blinky/pca10056/mbr/armgcc and do:
+
+make
+nrfutil pkg generate --debug-mode --hw-version 52 --sd-req 0x00 --application _build/nrf52840_xxaa.hex dfu.zip
+nrfutil dfu usb-serial -pkg dfu.zip -p $(find_port.py -n Nordic) -b 115200
+
+to program it just like using the dongle.
+
+I wound up having to create a /etc/udev/rules.d/49-nordic.rules file with the
+following contents in order to get ModemManager to not open the port and
+send AT#PORTCFG commands to it:
+
+# 1915:520f - nrf52840 USB CDC
+ATTRS{idVendor}=="1915", ATTRS{idProduct}=="520f", ENV{ID_MM_PORT_IGNORE}="1"
+ATTRS{idVendor}=="1915", ENV{MTP_NO_PROBE}="1"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1915", MODE:="0666"
+KERNEL=="ttyACM*", ATTRS{idVendor}=="1915", MODE:="0666"
+
+Of note is that I had to use ID_MM_PORT_IGNORE rather than ID_MM_DEVICE_IGNORE.
+I'm not sure if DEVICE_IGNORE is only used for composite devices or what
+exactly is going on.
+
+USB CDC ACM Example documentation:
+https://www.nordicsemi.com/DocLib/Content/SDK_Doc/nRF5_SDK/v15-2-0/usbd_cdc_acm_example
