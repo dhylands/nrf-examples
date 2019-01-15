@@ -46,10 +46,76 @@
 #ifdef USE_APP_CONFIG
 #include "app_config.h"
 #endif
+// <h> Application
+
+//==========================================================
+// <h> application_info - Software Component
+
+//==========================================================
+// <s> APP_NAME - Application name
+#ifndef APP_NAME
+#define APP_NAME "usbd-cdc-acm"
+#endif
+
+// <o> APP_ID - Application ID
+#ifndef APP_ID
+#define APP_ID 0
+#endif
+
+// <h> APP_VERSION - Application version (semantic versioning)
+
+//==========================================================
+// <o> APP_VERSION_MAJOR - Major version  <0-1000>
+
+
+#ifndef APP_VERSION_MAJOR
+#define APP_VERSION_MAJOR 0
+#endif
+
+// <o> APP_VERSION_MINOR - Minor version  <0-1000>
+
+
+#ifndef APP_VERSION_MINOR
+#define APP_VERSION_MINOR 1
+#endif
+
+// <o> APP_VERSION_PATCH - Patch version  <0-1000>
+
+
+#ifndef APP_VERSION_PATCH
+#define APP_VERSION_PATCH 0
+#endif
+
+// <s> APP_VERSION_PRERELEASE - Prerelease, eg. "-1.alpha"
+
+// <i> If not empty, this string should include the leading hyphen (-).
+// <i> This string might be normalized at run-time to not contain characters
+// <i> illegal in Semantic Versioning.
+#ifndef APP_VERSION_PRERELEASE
+#define APP_VERSION_PRERELEASE ""
+#endif
+
+// <s> APP_VERSION_METADATA - Metadata, e.g. "+some-string.01-01-2018-23-59-59"
+
+// <i> If not empty, this string should include the leading plus (+).
+// <i> This string might be normalized at run-time to not contain characters
+// <i> illegal in Semantic Versioning.
+#ifndef APP_VERSION_METADATA
+#define APP_VERSION_METADATA "+" __DATE__ " " __TIME__
+#endif
+
+// </h>
+//==========================================================
+
 // <h> Board Definition
 
 //==========================================================
 // <h> nrf_dfu_trigger_usb - USB DFU Trigger library
+
+// Added this jumper to make it similar to the PC10059
+// P0.19 is connected to the QSPI on the DK, so we use pin 31
+// which is one of the ADC pins.
+#define BSP_SELF_PINRESET_PIN NRF_GPIO_PIN_MAP(0,31)
 
 //==========================================================
 // <q> NRF_DFU_TRIGGER_USB_USB_SHARED  - Flag indicating whether USB is used for other purposes in the application.
@@ -66,7 +132,7 @@
 // <i> gaps. Tailor this value to adhere to this limitation.
 
 #ifndef NRF_DFU_TRIGGER_USB_INTERFACE_NUM
-#define NRF_DFU_TRIGGER_USB_INTERFACE_NUM 2
+#define NRF_DFU_TRIGGER_USB_INTERFACE_NUM 4
 #endif
 
 // </h>
@@ -1282,6 +1348,15 @@
 // <i> - @c ...     : List of string descriptors for each defined language.
 #ifndef APP_USBD_STRINGS_USER
 #define APP_USBD_STRINGS_USER X(APP_USER_1, , APP_USBD_STRING_DESC("User 1"))
+#endif
+
+// </e>
+
+// <q> APP_USBD_NRF_DFU_TRIGGER_ENABLED  - app_usbd_nrf_dfu_trigger - USBD Nordic DFU Trigger class
+
+
+#ifndef APP_USBD_NRF_DFU_TRIGGER_ENABLED
+#define APP_USBD_NRF_DFU_TRIGGER_ENABLED 1
 #endif
 
 // </e>

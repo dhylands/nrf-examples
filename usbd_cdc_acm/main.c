@@ -110,24 +110,41 @@ NRF_CLI_DEF(m_cli_uart,
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event);
 
-#define CDC_ACM_COMM_INTERFACE  0
-#define CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN2
+#define CDC_ACM_0_COMM_INTERFACE  0
+#define CDC_ACM_0_COMM_EPIN       NRF_DRV_USBD_EPIN2
 
-#define CDC_ACM_DATA_INTERFACE  1
-#define CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN1
-#define CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT1
+#define CDC_ACM_0_DATA_INTERFACE  1
+#define CDC_ACM_0_DATA_EPIN       NRF_DRV_USBD_EPIN1
+#define CDC_ACM_0_DATA_EPOUT      NRF_DRV_USBD_EPOUT1
+
+#define CDC_ACM_1_COMM_INTERFACE  2
+#define CDC_ACM_1_COMM_EPIN       NRF_DRV_USBD_EPIN4
+
+#define CDC_ACM_1_DATA_INTERFACE  3
+#define CDC_ACM_1_DATA_EPIN       NRF_DRV_USBD_EPIN3
+#define CDC_ACM_1_DATA_EPOUT      NRF_DRV_USBD_EPOUT2
 
 
 /**
  * @brief CDC_ACM class instance
  * */
-APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
+APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm_0,
                             cdc_acm_user_ev_handler,
-                            CDC_ACM_COMM_INTERFACE,
-                            CDC_ACM_DATA_INTERFACE,
-                            CDC_ACM_COMM_EPIN,
-                            CDC_ACM_DATA_EPIN,
-                            CDC_ACM_DATA_EPOUT,
+                            CDC_ACM_0_COMM_INTERFACE,
+                            CDC_ACM_0_DATA_INTERFACE,
+                            CDC_ACM_0_COMM_EPIN,
+                            CDC_ACM_0_DATA_EPIN,
+                            CDC_ACM_0_DATA_EPOUT,
+                            APP_USBD_CDC_COMM_PROTOCOL_AT_V250
+);
+
+APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm_1,
+                            cdc_acm_user_ev_handler,
+                            CDC_ACM_1_COMM_INTERFACE,
+                            CDC_ACM_1_DATA_INTERFACE,
+                            CDC_ACM_1_COMM_EPIN,
+                            CDC_ACM_1_DATA_EPIN,
+                            CDC_ACM_1_DATA_EPOUT,
                             APP_USBD_CDC_COMM_PROTOCOL_AT_V250
 );
 
@@ -143,7 +160,9 @@ static bool m_send_flag = 0;
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event)
 {
+    // p_cdc_acm points to m_app_cdc_acm_0 or m_app_cdc_acm_1
     app_usbd_cdc_acm_t const * p_cdc_acm = app_usbd_cdc_acm_class_get(p_inst);
+    uint8_t inst = (p_cdc_acm == &m_app_cdc_acm_0 ? 0 : 1);
 
     switch (event)
     {
@@ -152,7 +171,7 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
             bsp_board_led_on(LED_CDC_ACM_OPEN);
 
             /*Setup first transfer*/
-            ret_code_t ret = app_usbd_cdc_acm_read(&m_app_cdc_acm,
+            ret_code_t ret = app_usbd_cdc_acm_read(p_cdc_acm,
                                                    m_rx_buffer,
                                                    READ_SIZE);
             UNUSED_VARIABLE(ret);
@@ -167,15 +186,17 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
         case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
         {
             ret_code_t ret;
-            NRF_LOG_INFO("Bytes waiting: %d", app_usbd_cdc_acm_bytes_stored(p_cdc_acm));
+            NRF_LOG_INFO("Inst %d Bytes waiting: %d",
+                         inst, app_usbd_cdc_acm_bytes_stored(p_cdc_acm));
             do
             {
                 /*Get amount of data transfered*/
                 size_t size = app_usbd_cdc_acm_rx_size(p_cdc_acm);
-                NRF_LOG_INFO("RX: size: %lu char: %c", size, m_rx_buffer[0]);
+                NRF_LOG_INFO("Inst %d RX: size: %lu char: %c",
+                             inst, size, m_rx_buffer[0]);
 
                 /* Fetch data until internal buffer is empty */
-                ret = app_usbd_cdc_acm_read(&m_app_cdc_acm,
+                ret = app_usbd_cdc_acm_read(p_cdc_acm,
                                             m_rx_buffer,
                                             READ_SIZE);
             } while (ret == NRF_SUCCESS);
@@ -244,7 +265,7 @@ static void bsp_event_callback(bsp_event_t ev)
 
         case CONCAT_2(BSP_EVENT_KEY_, BTN_CDC_NOTIFY_SEND):
         {
-            ret = app_usbd_cdc_acm_serial_state_notify(&m_app_cdc_acm,
+            ret = app_usbd_cdc_acm_serial_state_notify(&m_app_cdc_acm_0,
                                                        APP_USBD_CDC_ACM_SERIAL_STATE_BREAK,
                                                        false);
             UNUSED_VARIABLE(ret);
@@ -317,9 +338,16 @@ int main(void)
     APP_ERROR_CHECK(ret);
     NRF_LOG_INFO("USBD CDC ACM example started.");
 
-    app_usbd_class_inst_t const * class_cdc_acm = app_usbd_cdc_acm_class_inst_get(&m_app_cdc_acm);
-    ret = app_usbd_class_append(class_cdc_acm);
+    app_usbd_class_inst_t const * class_cdc_acm_0 = app_usbd_cdc_acm_class_inst_get(&m_app_cdc_acm_0);
+    ret = app_usbd_class_append(class_cdc_acm_0);
     APP_ERROR_CHECK(ret);
+
+    app_usbd_class_inst_t const * class_cdc_acm_1 = app_usbd_cdc_acm_class_inst_get(&m_app_cdc_acm_1);
+    ret = app_usbd_class_append(class_cdc_acm_1);
+    APP_ERROR_CHECK(ret);
+
+    NRF_LOG_INFO("Initializing DFU trigger library.");
+    APP_ERROR_CHECK(nrf_dfu_trigger_usb_init());
 
     if (USBD_POWER_DETECTION)
     {
@@ -347,7 +375,7 @@ int main(void)
 
             size_t size = sprintf(m_tx_buffer, "Hello USB CDC FA demo: %u\r\n", frame_counter);
 
-            ret = app_usbd_cdc_acm_write(&m_app_cdc_acm, m_tx_buffer, size);
+            ret = app_usbd_cdc_acm_write(&m_app_cdc_acm_0, m_tx_buffer, size);
             if (ret == NRF_SUCCESS)
             {
                 ++frame_counter;
