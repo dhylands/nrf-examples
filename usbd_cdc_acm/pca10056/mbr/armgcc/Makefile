@@ -199,6 +199,17 @@ TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
 
 include $(TEMPLATE_PATH)/Makefile.common
 
+INC_PATHS_PP = $(call target_specific, INC_PATHS, $($(@:.pp=.o)_TGT))
+
+define runpp
+$(info INC_PATHS_PP = $(INC_PATHS_PP))
+$(info $(call PROGRESS,$(3) file: $(notdir $($@)))) \
+$(NO_ECHO)$(1) -MP -MD -E -Wp,-C,-dD,-dI -o $@ $(call get_path,$($(@:.pp=.o))) $(2) $(INC_PATHS_PP)
+endef
+
+%.c.pp:
+	$(call runpp,$(CC) -std=c99,$(CFLAGS),Preprocessing)
+
 $(foreach target, $(TARGETS), $(call define_target, $(target)))
 
 .PHONY: flash erase
