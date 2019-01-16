@@ -1,0 +1,22 @@
+To generate preprocessed files in the nRF5 SDK, add the following to
+your Makefile (after the include of Makefile.common):
+
+INC_PATHS_PP = $(call target_specific, INC_PATHS, $($(@:.pp=.o)_TGT))
+
+define runpp
+$(info INC_PATHS_PP = $(INC_PATHS_PP))
+$(info $(call PROGRESS,$(3) file: $(notdir $($@)))) \
+$(NO_ECHO)$(1) -MP -MD -E -Wp,-C,-dD,-dI -o $@ $(call get_path,$($(@:.pp=.o))) $(2) $(INC_PATHS_PP)
+endef
+
+%.c.pp:
+	$(call runpp,$(CC) -std=c99,$(CFLAGS),Preprocessing)
+
+
+
+and then you can invoke make as follows:
+
+make _build/nrf52840_xxaa/nrfx_uarte.c.pp
+
+
+You can use VERBOSE=1 to cause make to print actual commands executed.

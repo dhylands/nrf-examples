@@ -1,0 +1,60 @@
+{
+  "env": {
+    "nrfSDK": "/home/dhylands/nrf/nRF5_SDK_for_Thread_and_Zigbee_2.0.0_29775ac"
+},
+
+"configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${nrfSDK}/components/**",
+                "${nrfSDK}/components",
+                "${nrfSDK}/components/libraries/experimental_memobj",
+                "${nrfSDK}/components/libraries/experimental_section_vars",
+                "${nrfSDK}/modules/nrfx/mdk",
+                "${nrfSDK}/modules/nrfx/hal",
+                "${nrfSDK}/components/libraries/balloc",
+                "${nrfSDK}/components/libraries/experimental_log",
+                "${nrfSDK}/components/libraries/experimental_log/src",
+                "${nrfSDK}/components/libraries/delay",
+                "${nrfSDK}/integration/nrfx",
+                "${nrfSDK}/components/libraries/bsp",
+                "${nrfSDK}/components/drivers_nrf/nrf_soc_nosd",
+                "${nrfSDK}/components/libraries/strerror",
+                "${nrfSDK}/components/boards",
+                "${nrfSDK}/components/toolchain/cmsis/include",
+                "${nrfSDK}/modules/nrfx",
+                "${nrfSDK}/components/libraries/util",
+                "${nrfSDK}/components/libraries/fifo",
+                "${nrfSDK}/components/libraries/uart",
+                "${nrfSDK}/integration/nrfx/legacy",
+                "${nrfSDK}/components/libraries/delay",
+                "${nrfSDK}/modules/nrfx/drivers/include",
+                "${nrfSDK}/external/zboss/include",
+                "${workspaceFolder}/pca10056/blank/config",
+                "${workspaceFolder}/pca10056/blank"
+            ],
+            "defines": [
+              "_DEBUG",
+              "UNICODE",
+              "_UNICODE",
+              "BOARD_PCA10056",
+              "CONFIG_GPIO_AS_PINRESET",
+              "DEBUG",
+              "DEBUG_NRF",
+              "ENABLE_FEM",
+              "FLOAT_ABI_HARD",
+              "NRF52840_XXAA",
+              "SWI_DISABLE0",
+              "ZB_TRACE_LEVEL=0",
+              "ZB_TRACE_MASK=0"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}
