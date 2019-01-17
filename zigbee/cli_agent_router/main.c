@@ -180,6 +180,33 @@ void zboss_signal_handler(zb_uint8_t param)
     }
 }
 
+// The zb_cli_init function initializes the initial log level to ERROR
+// and doesn't provide any convenient way to change this. This changes
+// the default log level for the app to be INFO instead.
+static void fix_logging_level(void) {
+    uint32_t num_modules = nrf_log_module_cnt_get();
+    uint32_t backend_count = 0;
+#if NRF_LOG_BACKEND_RTT_ENABLED
+    backend_count++;
+#endif
+#if APP_USBD_ENABLED
+    backend_count++;
+#endif
+#if defined(TX_PIN_NUMBER) && defined(RX_PIN_NUMBER)
+    backend_count++;
+#endif
+
+    for (uint32_t module_id = 0; module_id < num_modules; module_id++) {
+        const char *module_name = nrf_log_module_name_get(module_id, true);
+        if (strcmp(module_name, "app") == 0) {
+            for (uint32_t backend_id = 0; backend_id < backend_count; backend_id++) {
+                nrf_log_module_filter_set(backend_id, module_id, NRF_LOG_SEVERITY_INFO);
+            }
+            break;
+        }
+    }
+}
+
 /**@brief Function for application main entry.
  */
 int main(void)
@@ -207,6 +234,10 @@ int main(void)
 
     /* Initialize the Zigbee CLI subsystem */
     zb_cli_init(ZIGBEE_CLI_ENDPOINT);
+
+    fix_logging_level();
+
+    NRF_LOG_INFO("cli_agent_router started");
 
     /* Set ZigBee stack logging level and traffic dump subsystem. */
     ZB_SET_TRACE_LEVEL(ZIGBEE_TRACE_LEVEL);

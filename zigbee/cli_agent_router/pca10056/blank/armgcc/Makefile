@@ -2,7 +2,7 @@ PROJECT_NAME     := zigbee_cli_agent_router_pca10056
 TARGETS          := nrf52840_xxaa
 OUTPUT_DIRECTORY := _build
 
-SDK_ROOT := ../../../../../../../..
+SDK_ROOT := ../../../../../../nRF5_SDK_for_Thread_and_Zigbee_2.0.0_29775ac
 PROJ_DIR := ../../..
 
 $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
@@ -230,6 +230,15 @@ help:
 
 TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
 
+INC_PATHS_PP = $(call target_specific, INC_PATHS, $($(@:.pp=.o)_TGT))
+
+define runpp
+$(info $(call PROGRESS,$(3) file: $(notdir $($@)))) \
+$(NO_ECHO)$(1) -MP -MD -E -Wp,-C,-dD,-dI -o $@ $(call get_path,$($(@:.pp=.o))) $(2) $(INC_PATHS_PP)
+endef
+
+%.c.pp:
+	$(call runpp,$(CC) -std=c99,$(CFLAGS),Preprocessing)
 
 include $(TEMPLATE_PATH)/Makefile.common
 
