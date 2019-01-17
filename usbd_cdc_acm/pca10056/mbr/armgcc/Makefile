@@ -18,6 +18,8 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_str_formatter.c \
   $(SDK_ROOT)/components/boards/boards.c \
+  $(SDK_ROOT)/components/libraries/usbd/class/nrf_dfu_trigger/app_usbd_nrf_dfu_trigger.c \
+  $(SDK_ROOT)/components/libraries/bootloader/dfu/nrf_dfu_trigger_usb.c \
   $(SDK_ROOT)/components/libraries/button/app_button.c \
   $(SDK_ROOT)/components/libraries/util/app_error.c \
   $(SDK_ROOT)/components/libraries/util/app_error_handler_gcc.c \
@@ -83,6 +85,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/fifo \
   $(SDK_ROOT)/components/libraries/strerror \
   $(SDK_ROOT)/components/toolchain/cmsis/include \
+  $(SDK_ROOT)/components/libraries/bootloader/dfu \
   $(SDK_ROOT)/components/libraries/timer \
   $(SDK_ROOT)/components/libraries/util \
   $(SDK_ROOT)/components/libraries/bsp \
@@ -113,9 +116,11 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/memobj \
   $(SDK_ROOT)/external/fnmatch \
   $(SDK_ROOT)/integration/nrfx \
+  $(SDK_ROOT)/components/libraries/usbd/class/nrf_dfu_trigger \
   $(SDK_ROOT)/external/utf_converter \
   $(SDK_ROOT)/modules/nrfx/drivers/include \
   $(SDK_ROOT)/modules/nrfx/hal \
+  $(SDK_ROOT)/components/libraries/block_dev \
   $(SDK_ROOT)/external/fprintf \
   $(SDK_ROOT)/components/libraries/log/src \
 
@@ -193,6 +198,17 @@ TEMPLATE_PATH := $(SDK_ROOT)/components/toolchain/gcc
 
 
 include $(TEMPLATE_PATH)/Makefile.common
+
+INC_PATHS_PP = $(call target_specific, INC_PATHS, $($(@:.pp=.o)_TGT))
+
+define runpp
+$(info INC_PATHS_PP = $(INC_PATHS_PP))
+$(info $(call PROGRESS,$(3) file: $(notdir $($@)))) \
+$(NO_ECHO)$(1) -MP -MD -E -Wp,-C,-dD,-dI -o $@ $(call get_path,$($(@:.pp=.o))) $(2) $(INC_PATHS_PP)
+endef
+
+%.c.pp:
+	$(call runpp,$(CC) -std=c99,$(CFLAGS),Preprocessing)
 
 $(foreach target, $(TARGETS), $(call define_target, $(target)))
 

@@ -51,7 +51,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "nrf_delay.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
 #include "boards.h"
+
+static void log_init(void)
+{
+    ret_code_t err_code = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(err_code);
+
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+}
 
 /**
  * @brief Function for application main entry.
@@ -61,14 +72,19 @@ int main(void)
     /* Configure board. */
     bsp_board_init(BSP_INIT_LEDS);
 
+    log_init();
+    NRF_LOG_INFO("Blinky Started");
+
     /* Toggle LEDs. */
     while (true)
     {
         for (int i = 0; i < LEDS_NUMBER; i++)
         {
+            NRF_LOG_INFO("Toggling LED %d", i);
             bsp_board_led_invert(i);
             nrf_delay_ms(500);
         }
+        UNUSED_RETURN_VALUE(NRF_LOG_PROCESS());
     }
 }
 

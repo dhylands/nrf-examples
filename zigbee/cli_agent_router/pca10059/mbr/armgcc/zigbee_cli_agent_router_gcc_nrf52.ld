@@ -5,8 +5,8 @@ GROUP(-lgcc -lc -lnosys)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x0, LENGTH = 0x100000
-  RAM (rwx) :  ORIGIN = 0x20000000, LENGTH = 0x40000
+  FLASH (rx) : ORIGIN = 0x1000, LENGTH = 0xff000
+  RAM (rwx) :  ORIGIN = 0x20000008, LENGTH = 0x3fff8
 }
 
 SECTIONS
@@ -31,6 +31,12 @@ SECTIONS
     KEEP(*(SORT(.log_filter_data*)))
     PROVIDE(__stop_log_filter_data = .);
   } > RAM
+  .fs_data :
+  {
+    PROVIDE(__start_fs_data = .);
+    KEEP(*(.fs_data))
+    PROVIDE(__stop_fs_data = .);
+  } > RAM
   .cli_sorted_cmd_ptrs :
   {
     PROVIDE(__start_cli_sorted_cmd_ptrs = .);
@@ -45,17 +51,23 @@ SECTIONS
   .mem_section_dummy_rom :
   {
   }
+    .nrf_queue :
+  {
+    PROVIDE(__start_nrf_queue = .);
+    KEEP(*(.nrf_queue))
+    PROVIDE(__stop_nrf_queue = .);
+  } > FLASH
+    .zb_ep_handlers :
+  {
+    PROVIDE(__start_zb_ep_handlers = .);
+    KEEP(*(.zb_ep_handlers))
+    PROVIDE(__stop_zb_ep_handlers = .);
+  } > FLASH
   .log_const_data :
   {
     PROVIDE(__start_log_const_data = .);
     KEEP(*(SORT(.log_const_data*)))
     PROVIDE(__stop_log_const_data = .);
-  } > FLASH
-  .log_backends :
-  {
-    PROVIDE(__start_log_backends = .);
-    KEEP(*(SORT(.log_backends*)))
-    PROVIDE(__stop_log_backends = .);
   } > FLASH
     .cli_command :
   {
@@ -69,11 +81,11 @@ SECTIONS
     KEEP(*(SORT(.pwr_mgmt_data*)))
     PROVIDE(__stop_pwr_mgmt_data = .);
   } > FLASH
-    .nrf_queue :
+  .log_backends :
   {
-    PROVIDE(__start_nrf_queue = .);
-    KEEP(*(.nrf_queue))
-    PROVIDE(__stop_nrf_queue = .);
+    PROVIDE(__start_log_backends = .);
+    KEEP(*(SORT(.log_backends*)))
+    PROVIDE(__stop_log_backends = .);
   } > FLASH
     .nrf_balloc :
   {
