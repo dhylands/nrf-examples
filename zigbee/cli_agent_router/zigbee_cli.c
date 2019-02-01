@@ -64,6 +64,7 @@
 #include "nrf_log_default_backends.h"
 #include "nrf_log_backend_flash.h"
 
+extern void user_usb_init(void);
 
 #if defined(APP_USBD_ENABLED) && APP_USBD_ENABLED
 #define CLI_OVER_USB_CDC_ACM 1
@@ -80,7 +81,7 @@
 #include "app_usbd_cdc_acm.h"
 #endif //CLI_OVER_USB_CDC_ACM
 
-#if defined(TX_PIN_NUMBER) && defined(RX_PIN_NUMBER)
+#if defined(TX_PIN_NUMBER) && defined(RX_PIN_NUMBER) && NRF_CLI_UART_ENABLED
 #define CLI_OVER_UART 1
 #else
 #define CLI_OVER_UART 0
@@ -241,6 +242,8 @@ static void usbd_init(void)
     };
     ret = app_usbd_init(&usbd_config);
     APP_ERROR_CHECK(ret);
+
+    user_usb_init();
 
     app_usbd_class_inst_t const * class_cdc_acm =
             app_usbd_cdc_acm_class_inst_get(&nrf_cli_cdc_acm);
