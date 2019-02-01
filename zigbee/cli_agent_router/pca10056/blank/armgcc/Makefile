@@ -33,6 +33,7 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd.c \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd_core.c \
+  $(SDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd_string_desc.c \
   $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(SDK_ROOT)/components/libraries/assert/assert.c \
@@ -76,11 +77,14 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uarte.c \
   $(SDK_ROOT)/components/libraries/bsp/bsp.c \
   $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/slip.c \
+  $(PROJ_DIR)/packet.c \
+  $(PROJ_DIR)/dumpmem.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_Syscalls_GCC.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_printf.c \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
-  $(SDK_ROOT)/components/zigbee/cli/zigbee_cli.c \
+  $(PROJ_DIR)/zigbee_cli.c \
   $(SDK_ROOT)/components/zigbee/cli/zigbee_cli_cmd_attr.c \
   $(SDK_ROOT)/components/zigbee/cli/zigbee_cli_cmd_attr_report.c \
   $(SDK_ROOT)/components/zigbee/cli/zigbee_cli_cmd_bdb.c \

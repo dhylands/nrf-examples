@@ -50,17 +50,28 @@
 
 #include "zigbee_cli.h"
 
+#include "nrf_drv_usbd.h"
 #include "nrf_drv_clock.h"
 #include "boards.h"
 #include "app_timer.h"
+#include "app_usbd.h"
+#include "app_usbd_cdc_acm.h"
+#include "app_usbd_serial_num.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#define IEEE_CHANNEL_MASK                   (1l << ZIGBEE_CHANNEL)              /**< Scan only one, predefined channel to find the coordinator. */
-#define ERASE_PERSISTENT_CONFIG             ZB_TRUE                             /**< Do not erase NVRAM to save the network parameters after device reboot or power-off. NOTE: If this option is set to ZB_TRUE then do full device erase for all network devices before running other samples. */
-#define ZIGBEE_NETWORK_STATE_LED            BSP_BOARD_LED_2                     /**< LED indicating that light switch successfully joind ZigBee network. */
+#include "dumpmem.h"
+#include "slip.h"
+#include "packet.h"
+
+void user_usb_init(void);
+
+#define IEEE_CHANNEL_MASK           (1l << ZIGBEE_CHANNEL)  /**< Scan only one, predefined channel to find the coordinator. */
+#define ERASE_PERSISTENT_CONFIG     ZB_TRUE                 /**< Do not erase NVRAM to save the network parameters after device reboot or power-off. NOTE: If this option is set to ZB_TRUE then do full device erase for all network devices before running other samples. */
+#define ZIGBEE_NETWORK_STATE_LED    (BSP_BOARD_LED_2)       /**< LED indicating that light switch successfully joind ZigBee network. */
+#define LED_CDC_ACM_TXRX            (BSP_BOARD_LED_3)
 
 #if !defined ZB_ROUTER_ROLE
 #error Define ZB_ROUTER_ROLE to compile CLI agent (Router) source code.
@@ -96,6 +107,93 @@ ZB_HA_DECLARE_CONFIGURATION_TOOL_EP(cli_agent_ep,
 
 /* Declare application's device context (list of registered endpoints) for CLI Agent device. */
 ZB_HA_DECLARE_CONFIGURATION_TOOL_CTX(cli_agent_ctx, cli_agent_ep);
+
+#define CDC_ACM_COMM_INTERFACE  0
+#define CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN2
+
+#define CDC_ACM_DATA_INTERFACE  1
+#define CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN1
+#define CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT1
+
+static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
+                                    app_usbd_cdc_acm_user_event_t event);
+
+APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
+                            cdc_acm_user_ev_handler,
+                            CDC_ACM_COMM_INTERFACE,
+                            CDC_ACM_DATA_INTERFACE,
+                            CDC_ACM_COMM_EPIN,
+                            CDC_ACM_DATA_EPIN,
+                            CDC_ACM_DATA_EPOUT,
+                            APP_USBD_CDC_COMM_PROTOCOL_AT_V250
+);
+
+#define READ_SIZE 64
+
+static uint8_t m_rx_buffer[READ_SIZE];
+// static uint8_t m_tx_buffer[NRF_DRV_USBD_EPSIZE];
+// static bool m_send_flag = 0;
+static SLIP_Parser_t  m_slipParser;
+
+/**
+ * @brief User event handler @ref app_usbd_cdc_acm_user_ev_handler_t (headphones)
+ * */
+static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
+                                    app_usbd_cdc_acm_user_event_t event)
+{
+    // p_cdc_acm points to m_app_cdc_acm_0 or m_app_cdc_acm_1
+    app_usbd_cdc_acm_t const * p_cdc_acm = app_usbd_cdc_acm_class_get(p_inst);
+
+    switch (event)
+    {
+        case APP_USBD_CDC_ACM_USER_EVT_PORT_OPEN:
+        {
+#if defined(LED_CDC_ACM_OPEN)
+            bsp_board_led_on(LED_CDC_ACM_OPEN);
+#endif
+
+            /*Setup first transfer*/
+            ret_code_t ret = app_usbd_cdc_acm_read(p_cdc_acm,
+                                                   m_rx_buffer,
+                                                   READ_SIZE);
+            UNUSED_VARIABLE(ret);
+            break;
+        }
+#if defined(LED_CDC_ACM_OPEN)
+        case APP_USBD_CDC_ACM_USER_EVT_PORT_CLOSE:
+            bsp_board_led_off(LED_CDC_ACM_OPEN);
+            break;
+#endif
+        case APP_USBD_CDC_ACM_USER_EVT_TX_DONE:
+            bsp_board_led_invert(LED_CDC_ACM_TXRX);
+            break;
+        case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
+        {
+            ret_code_t ret;
+            NRF_LOG_INFO("Bytes waiting: %d",
+                         app_usbd_cdc_acm_bytes_stored(p_cdc_acm));
+            do
+            {
+                /*Get amount of data transfered*/
+                size_t bytesAvail = app_usbd_cdc_acm_rx_size(p_cdc_acm);
+                DumpMem("Rcvd Chunk", m_rx_buffer, bytesAvail);
+
+                /* Fetch data until internal buffer is empty */
+                ret = app_usbd_cdc_acm_read(p_cdc_acm,
+                                            m_rx_buffer,
+                                            bytesAvail);
+                if (ret == NRF_SUCCESS) {
+                    SLIP_parseChunk(&m_slipParser, m_rx_buffer, bytesAvail);
+                }
+            } while (ret == NRF_SUCCESS);
+
+            bsp_board_led_invert(LED_CDC_ACM_TXRX);
+            break;
+        }
+        default:
+            break;
+    }
+}
 
 static void log_init(void)
 {
@@ -207,6 +305,13 @@ static void fix_logging_level(void) {
     }
 }
 
+void user_usb_init(void) {
+  NRF_LOG_INFO("user_usb_init");
+  app_usbd_class_inst_t const * class_cdc_acm = app_usbd_cdc_acm_class_inst_get(&m_app_cdc_acm);
+  ret_code_t ret = app_usbd_class_append(class_cdc_acm);
+  APP_ERROR_CHECK(ret);
+}
+
 /**@brief Function for application main entry.
  */
 int main(void)
@@ -223,6 +328,8 @@ int main(void)
     /* Initialize loging system and GPIOs. */
     log_init();
 
+    SLIP_initParser(&m_slipParser, PacketReceived);
+
 #if defined(APP_USBD_ENABLED) && APP_USBD_ENABLED
     ret = nrf_drv_clock_init();
     APP_ERROR_CHECK(ret);
@@ -232,7 +339,10 @@ int main(void)
     ret = app_timer_init();
     APP_ERROR_CHECK(ret);
 
-    /* Initialize the Zigbee CLI subsystem */
+    app_usbd_serial_num_generate();
+
+    // Initialize the Zigbee CLI subsystem. This also has a side effect
+    // of initializing the USB subsystem if APP_USBD_ENABLED is defined.
     zb_cli_init(ZIGBEE_CLI_ENDPOINT);
 
     fix_logging_level();
