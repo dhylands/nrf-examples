@@ -170,7 +170,7 @@ static void usbd_user_ev_handler(app_usbd_event_type_t event)
 /**
  * @brief Command line interface instance
  * */
-#define CLI_EXAMPLE_LOG_QUEUE_SIZE  (4)
+#define CLI_EXAMPLE_LOG_QUEUE_SIZE  (16)
 
 #if CLI_OVER_USB_CDC_ACM
 NRF_CLI_CDC_ACM_DEF(m_cli_cdc_acm_transport);

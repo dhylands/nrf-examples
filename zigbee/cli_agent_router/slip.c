@@ -7,6 +7,8 @@
  */
 
 #include "slip.h"
+#include "debug_flags.h"
+#include "nrf_log.h"
 
 // The following come from RFC1055. which describes the framing used
 // for SLIP.
@@ -23,7 +25,10 @@ void SLIP_initParser(SLIP_Parser_t *parser, SLIP_PacketRcvdCallback cb) {
 }
 
 void SLIP_parseChunk(SLIP_Parser_t *parser, const uint8_t *chunk, size_t chunkLen) {
-
+  if (DEBUG_slip) {
+    NRF_LOG_INFO("Rcvd SLIP Chunk: %d bytes", chunkLen);
+    NRF_LOG_HEXDUMP_INFO(chunk, chunkLen);
+  }
   for (size_t i = chunkLen; i > 0; --i) {
     uint8_t ch = *chunk++;
     if (parser->handling_esc) {

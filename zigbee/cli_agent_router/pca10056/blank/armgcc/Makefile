@@ -80,6 +80,7 @@ SRC_FILES += \
   $(PROJ_DIR)/slip.c \
   $(PROJ_DIR)/packet.c \
   $(PROJ_DIR)/dumpmem.c \
+  $(PROJ_DIR)/debug_cli.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_Syscalls_GCC.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_printf.c \

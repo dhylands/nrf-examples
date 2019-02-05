@@ -47,6 +47,7 @@
 #include "zboss_api.h"
 #include "zb_mem_config_max.h"
 #include "zb_ha_configuration_tool.h"
+#include "zb_error_handler.h"
 
 #include "zigbee_cli.h"
 
@@ -68,7 +69,8 @@
 
 void user_usb_init(void);
 
-#define IEEE_CHANNEL_MASK           (1l << ZIGBEE_CHANNEL)  /**< Scan only one, predefined channel to find the coordinator. */
+// #define IEEE_CHANNEL_MASK           ZB_TRANSCEIVER_ALL_CHANNELS_MASK  /**< Allow all channels from 11-26 */
+#define IEEE_CHANNEL_MASK           (1 << 15)
 #define ERASE_PERSISTENT_CONFIG     ZB_TRUE                 /**< Do not erase NVRAM to save the network parameters after device reboot or power-off. NOTE: If this option is set to ZB_TRUE then do full device erase for all network devices before running other samples. */
 #define ZIGBEE_NETWORK_STATE_LED    (BSP_BOARD_LED_2)       /**< LED indicating that light switch successfully joind ZigBee network. */
 #define LED_CDC_ACM_TXRX            (BSP_BOARD_LED_3)
@@ -153,9 +155,10 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
 #endif
 
             /*Setup first transfer*/
-            ret_code_t ret = app_usbd_cdc_acm_read(p_cdc_acm,
-                                                   m_rx_buffer,
-                                                   READ_SIZE);
+            memset(m_rx_buffer, 0xee, sizeof(m_rx_buffer));
+            ret_code_t ret = app_usbd_cdc_acm_read_any(p_cdc_acm,
+                                                       m_rx_buffer,
+                                                       READ_SIZE);
             UNUSED_VARIABLE(ret);
             break;
         }
@@ -170,21 +173,16 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
         case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
         {
             ret_code_t ret;
-            NRF_LOG_INFO("Bytes waiting: %d",
-                         app_usbd_cdc_acm_bytes_stored(p_cdc_acm));
             do
             {
                 /*Get amount of data transfered*/
                 size_t bytesAvail = app_usbd_cdc_acm_rx_size(p_cdc_acm);
-                DumpMem("Rcvd Chunk", m_rx_buffer, bytesAvail);
+                SLIP_parseChunk(&m_slipParser, m_rx_buffer, bytesAvail);
 
                 /* Fetch data until internal buffer is empty */
-                ret = app_usbd_cdc_acm_read(p_cdc_acm,
-                                            m_rx_buffer,
-                                            bytesAvail);
-                if (ret == NRF_SUCCESS) {
-                    SLIP_parseChunk(&m_slipParser, m_rx_buffer, bytesAvail);
-                }
+                ret = app_usbd_cdc_acm_read_any(p_cdc_acm,
+                                                m_rx_buffer,
+                                                READ_SIZE);
             } while (ret == NRF_SUCCESS);
 
             bsp_board_led_invert(LED_CDC_ACM_TXRX);
@@ -193,6 +191,14 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
         default:
             break;
     }
+}
+
+void WriteResponse(uint8_t *buf, size_t bufLen) {
+  ret_code_t ret = app_usbd_cdc_acm_write(&m_app_cdc_acm, buf, bufLen);
+  if (ret != NRF_SUCCESS)
+  {
+    NRF_LOG_ERROR("Failed to write %lu byte response", bufLen);
+  }
 }
 
 static void log_init(void)
@@ -267,6 +273,26 @@ void zboss_signal_handler(zb_uint8_t param)
             m_stack_started = ZB_TRUE;
             break;
 
+        case ZB_ZDO_SIGNAL_DEVICE_ANNCE:
+            NRF_LOG_INFO("ZB_ZDO_SIGNAL_DEVICE_ANNCE, status = %d", status);
+            break;
+
+        case ZB_ZDO_SIGNAL_ERROR:
+            NRF_LOG_INFO("ZB_ZDO_SIGNAL_ERROR, status = %d", status);
+            break;
+
+        case ZB_BDB_SIGNAL_STEERING:
+            NRF_LOG_INFO("ZB_BDB_SIGNAL_STEERING, status = %d", status);
+            break;
+
+        case ZB_BDB_SIGNAL_FORMATION:
+            NRF_LOG_INFO("ZB_BDB_SIGNAL_FORMATION, status = %d", status);
+            break;
+
+        case ZB_ZDO_SIGNAL_LEAVE_INDICATION:
+            NRF_LOG_INFO("ZB_ZDO_SIGNAL_LEAVE_INDICATION, status = %d", status);
+            break;
+
         default:
             /* Unhandled signal. For more information see: zb_zdo_app_signal_type_e and zb_ret_e */
             NRF_LOG_INFO("Unhandled signal %d. Status: %d", sig, status);
@@ -316,8 +342,8 @@ void user_usb_init(void) {
  */
 int main(void)
 {
-    ret_code_t     ret;
-    zb_ieee_addr_t ieee_addr;
+    ret_code_t      ret;
+    zb_ieee_addr_t  ieee_addr;
 
     UNUSED_VARIABLE(m_device_ctx);
 
@@ -348,6 +374,7 @@ int main(void)
     fix_logging_level();
 
     NRF_LOG_INFO("cli_agent_router started");
+    NRF_LOG_PROCESS();
 
     /* Set ZigBee stack logging level and traffic dump subsystem. */
     ZB_SET_TRACE_LEVEL(ZIGBEE_TRACE_LEVEL);
@@ -362,7 +389,6 @@ int main(void)
     zb_set_long_address(ieee_addr);
 
     zb_set_bdb_primary_channel_set(IEEE_CHANNEL_MASK);
-    zb_set_nvram_erase_at_start(ERASE_PERSISTENT_CONFIG);
 
     /* Register CLI Agent device context (endpoints). */
     ZB_AF_REGISTER_DEVICE_CTX(&cli_agent_ctx);
@@ -370,10 +396,41 @@ int main(void)
     /* Set the endpoint receive hook */
     ZB_AF_SET_ENDPOINT_HANDLER(ZIGBEE_CLI_ENDPOINT, cli_agent_ep_handler);
 
+#if 1
+    zb_ext_pan_id_t extPanId;
+    zb_ext_pan_id_t zeroPanId;
+
+    memset(zeroPanId, 0, sizeof(zeroPanId));
+    zb_get_extended_pan_id(extPanId);
+    if (memcmp(extPanId, zeroPanId, sizeof(zeroPanId)) == 0) {
+      // Extended PAN ID hasn't been set yet. Use the MAC address
+      memcpy(extPanId, ieee_addr, sizeof(extPanId));
+      zb_set_extended_pan_id(extPanId);
+      NRF_LOG_INFO("Setting extended PAN Id to Mac address");
+      NRF_LOG_HEXDUMP_INFO(extPanId, sizeof(extPanId));
+      NRF_LOG_PROCESS();
+    }
+#endif
+
+    uint32_t channelMask = zb_get_bdb_primary_channel_set();
+    NRF_LOG_INFO("channelMask = 0x%08x", channelMask);
+    NRF_LOG_PROCESS();
+    zb_set_network_coordinator_role(channelMask);
+
+    zb_set_nvram_erase_at_start(ERASE_PERSISTENT_CONFIG);
+
+    NRF_LOG_INFO("About to call zboss_start");
+    NRF_LOG_PROCESS();
+    zb_ret_t zb_err_code = zboss_start();
+    ZB_ERROR_CHECK(zb_err_code);
+
+    NRF_LOG_INFO("About to enter main loop");
+    NRF_LOG_PROCESS();
+
     /* Start ZigBee stack. */
     while(1)
     {
-        if (m_stack_started)
+        //if (m_stack_started)
         {
             zboss_main_loop_iteration();
         }

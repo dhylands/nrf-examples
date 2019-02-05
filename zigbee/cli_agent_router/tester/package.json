@@ -1,0 +1,22 @@
+{
+  "name": "tester",
+  "version": "1.0.0",
+  "description": "Initial Tester for nrf52840 dongle",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "author": "",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "command-line-args": "^5.0.2",
+    "deconz-api": "git+https://github.com/mozilla-iot/deconz-api.git",
+    "serialport": "^6.2.2",
+    "zigbee-zdo": "git+https://github.com/mozilla-iot/zigbee-zdo.git"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "eslint": "^5.13.0",
+    "eslint-plugin-html": "^5.0.0"
+  }
+}
