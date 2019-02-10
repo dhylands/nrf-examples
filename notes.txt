@@ -16,6 +16,10 @@ Instal nrfutil:
 sudo python -m pip install nrfutil
 I had to edit /usr/local/bin/nrfutil and change python3 to python
 
+Grab udev rules from:
+https://github.com/NordicSemiconductor/nrf-udev/releases/download/v1.0.1/nrf-udev_1.0.1-all.deb
+sudo dpkg -i nrf-udev_1.0.1-all.deb
+
 Programming the nrf52840 Dongle:
 nrfutil pkg generate --debug-mode --hw-version 52 --sd-req 0x00 --application _build/nrf52840_xxaa.hex dfu.zip
 nrfutil dfu usb-serial -pkg dfu.zip -p $(find_port.py -n Nordic) -b 115200

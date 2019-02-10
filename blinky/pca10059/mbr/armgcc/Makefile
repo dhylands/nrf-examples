@@ -2,7 +2,7 @@ PROJECT_NAME     := blinky_pca10059_mbr
 TARGETS          := nrf52840_xxaa
 OUTPUT_DIRECTORY := _build
 
-SDK_ROOT := ../../../../../..
+SDK_ROOT := ../../../../../nRF5_SDK_for_Thread_and_Zigbee_2.0.0_29775ac
 PROJ_DIR := ../../..
 
 $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
@@ -145,6 +145,12 @@ flash_mbr:
 	@echo Flashing: mbr_nrf52_2.3.0_mbr.hex
 	nrfjprog -f nrf52 --program $(SDK_ROOT)/components/softdevice/mbr/nrf52840/hex/mbr_nrf52_2.3.0_mbr.hex --sectorerase
 	nrfjprog -f nrf52 --reset
+
+$(OUTPUT_DIRECTORY)/dfu.zip: $(OUTPUT_DIRECTORY)/nrf52840_xxaa.hex
+	nrfutil pkg generate --debug-mode --hw-version 52 --sd-req 0x00 --application $< $@
+
+dfu: $(OUTPUT_DIRECTORY)/dfu.zip
+	nrfutil dfu usb-serial -pkg $< -p $(shell find_port.py -n Nordic) -b 115200
 
 erase:
 	nrfjprog -f nrf52 --eraseall
