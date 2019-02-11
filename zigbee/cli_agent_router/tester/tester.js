@@ -5,6 +5,7 @@
 const assert = require('assert');
 const commandLineArgs = require('command-line-args');
 const deconzApi = require('deconz-api');
+const dumpFrame = require('./dump-frame').dumpFrame;
 const EventEmitter = require('events');
 const SerialPort = require('serialport');
 const util = require('util');
@@ -123,7 +124,8 @@ class DeconzTest {
     this.frameDumped = false;
 
     this.dc = new deconzApi.DeconzAPI({raw_frames: DEBUG_rawFrames});
-    this.zdo = this.dc.zdo;
+
+    this.zdo = new zdo.ZdoApi(this.nextFrameId, C.FRAME_TYPE.APS_DATA_REQUEST);
 
     this.dc.on('error', (err) => {
       console.error('deConz error:', err);
@@ -186,12 +188,16 @@ class DeconzTest {
         // FUNC(this, this.version),
         FUNC(this, this.dumpParameters),
         // FUNC(this, this.configureIfNeeded),
-        // FUNC(this, this.scan),
+        FUNC(this, this.scan),
         //
         // FUNC(this, this.readParameters),
         // FUNC(this, this.dumpParameters),
       ]);
     });
+  }
+
+  nextFrameId() {
+    return deconzApi._frame_builder.nextFrameId();
   }
 
   configureIfNeeded() {
@@ -217,7 +223,7 @@ class DeconzTest {
       dumpFrameDetail = DEBUG_frameDetail;
     }
     this.frameDumped = true;
-    this.dc.dumpFrame(label, frame, dumpFrameDetail);
+    dumpFrame(label, frame, dumpFrameDetail);
   }
 
   dumpParameters() {
